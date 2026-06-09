@@ -11,6 +11,8 @@ class BottomNavBar extends StatelessWidget {
     required this.onTap,
   });
 
+  //Bottom_Nav bar content
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -33,7 +35,7 @@ class BottomNavBar extends StatelessWidget {
         children: [
           _NavItem(
             icon: Icons.dashboard,
-            label: 'Home',
+            label: 'Dashboard',
             isSelected: currentIndex == 0,
             onTap: () => onTap(0),
           ),

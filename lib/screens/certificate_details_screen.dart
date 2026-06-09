@@ -1,618 +1,768 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../models/certificate.dart';
-import '../services/blockchain_service.dart';
+import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../providers/auth_provider.dart';
+import '../services/api_service.dart';
 import '../services/pdf_service.dart';
-import '../services/qr_service.dart';
 import '../utils/theme.dart';
 
-class CertificateDetailsScreen extends StatefulWidget {
-  final Certificate certificate;
+class CredentialDetailsScreen extends StatefulWidget {
+  final String credentialId;
 
-  const CertificateDetailsScreen({
-    super.key,
-    required this.certificate,
-    required credentialId,
-  });
+  const CredentialDetailsScreen({super.key, required this.credentialId});
 
   @override
-  State<CertificateDetailsScreen> createState() =>
-      _CertificateDetailsScreenState();
+  State<CredentialDetailsScreen> createState() =>
+      _CredentialDetailsScreenState();
 }
 
-class _CertificateDetailsScreenState extends State<CertificateDetailsScreen> {
-  List<Map<String, dynamic>> _history = [];
-  bool _isLoadingHistory = true;
+class _CredentialDetailsScreenState extends State<CredentialDetailsScreen> {
+  final ApiService _apiService = ApiService();
+
+  Map<String, dynamic>? _credential;
+  bool _isLoading = true;
+  bool _isActionInProgress = false;
+  bool _isGeneratingPDF = false;
+  String? _error;
+  Uint8List? _qrCodeImage;
 
   @override
   void initState() {
     super.initState();
-    _loadHistory();
+    _fetchCredentialDetails();
   }
 
-  Future<void> _loadHistory() async {
-    setState(() => _isLoadingHistory = true);
-    _history = await BlockchainService.getCertificateHistory(
-      widget.certificate.transactionId,
-    );
-    setState(() => _isLoadingHistory = false);
+  Future<void> _fetchCredentialDetails() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final result = await _apiService.getCredentialDetails(widget.credentialId);
+
+    setState(() {
+      _isLoading = false;
+      if (result['success']) {
+        _credential = result;
+        _generateQRCode();
+      } else {
+        _error = result['error'];
+      }
+    });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Certificate Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: () => _downloadPDF(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () => _shareCertificate(),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Digital Certificate Card
-            _buildDigitalCertificate(),
-            const SizedBox(height: 24),
+  void _generateQRCode() {
+    // Generate QR code from credential ID
+    final qrData = _credential?['credentialId'] ?? widget.credentialId;
+    // Use qr_flutter to generate QR as image
+    // For PDF, we'll generate on demand
+  }
 
-            // Security & Verification Section
-            Text(
-              'Security & Verification',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            _buildSecurityCard(),
-            const SizedBox(height: 24),
+  List<Map<String, dynamic>> _safeCredentialsToList(dynamic credentials) {
+    if (credentials == null) return [];
+    if (credentials is List) {
+      return credentials.map((e) {
+        if (e is Map<String, dynamic>) return e;
+        return Map<String, dynamic>.from(e);
+      }).toList();
+    }
+    if (credentials is Map) {
+      return [Map<String, dynamic>.from(credentials)];
+    }
+    return [];
+  }
 
-            // Blockchain History
-            Text(
-              'Blockchain History',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            _buildHistoryTimeline(),
-            const SizedBox(height: 24),
-
-            // Action Buttons
-            _buildActionButtons(),
-          ],
+  Future<Uint8List?> _generateQRCodeImage() async {
+    final qrData = _credential?['credentialId'] ?? widget.credentialId;
+    try {
+      final qrImage = await QrPainter(
+        data: qrData,
+        version: QrVersions.auto,
+        eyeStyle: const QrEyeStyle(
+          color: Color(0xFF00236F),
+          eyeShape: QrEyeShape.square,
         ),
-      ),
-    );
-  }
-
-  Widget _buildDigitalCertificate() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.outlineVariant),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header with seal
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              border: Border(
-                bottom: BorderSide(color: AppTheme.outlineVariant),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryContainer.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: const Icon(
-                    Icons.account_balance,
-                    size: 32,
-                    color: AppTheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.certificate.institution,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Office of the Registrar',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Certificate Body
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                Text(
-                  'CERTIFICATE OF GRADUATION',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primary,
-                    letterSpacing: 1,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'This is to certify that',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  widget.certificate.studentName.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Matric Number: ${widget.certificate.matricNumber}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'has been admitted to the degree of',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  widget.certificate.degree,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.secondaryContainer.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    widget.certificate.classification,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.secondary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Divider(),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Date',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.outline,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.certificate.issueDate,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Status',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.outline,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: widget.certificate.isActive
-                                  ? AppTheme.secondaryContainer.withOpacity(0.3)
-                                  : AppTheme.errorContainer.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              widget.certificate.status,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: widget.certificate.isActive
-                                    ? AppTheme.secondary
-                                    : AppTheme.error,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Footer badge
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.05),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.verified, size: 16, color: AppTheme.secondary),
-                const SizedBox(width: 8),
-                Text(
-                  'Verified on CredChain Blockchain',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecurityCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // QR Code
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppTheme.outlineVariant,
-                  width: 1.5,
-                  style: BorderStyle.solid,
-                ),
-              ),
-              child: QRService.generateQRCode(
-                widget.certificate.transactionId,
-                size: 160,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: Text(
-              'Scan QR code to verify authenticity instantly',
-              style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Hashes
-          _buildHashRow(
-            label: 'Credential Hash (SHA-256)',
-            value: widget.certificate.hash,
-          ),
-          const SizedBox(height: 16),
-          _buildHashRow(
-            label: 'Blockchain Transaction ID',
-            value: widget.certificate.transactionId,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHashRow({required String label, required String value}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.info_outline, size: 14, color: AppTheme.outline),
-          ],
+        dataModuleStyle: const QrDataModuleStyle(
+          color: Color(0xFF00236F),
+          dataModuleShape: QrDataModuleShape.square,
         ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.outlineVariant),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  value,
-                  style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+      ).toImageData(200);
+
+      return qrImage?.buffer.asUint8List();
+    } catch (e) {
+      print('Error generating QR code: $e');
+      return null;
+    }
+  }
+
+  Future<void> _downloadPDF() async {
+    setState(() => _isGeneratingPDF = true);
+
+    final qrImageBytes = await _generateQRCodeImage();
+
+    final pdfBytes = await PDFService.generateCertificatePDF(
+      credential: _credential!,
+      qrCodeImage: qrImageBytes,
+    );
+
+    setState(() => _isGeneratingPDF = false);
+
+    // Show save options dialog
+    await PDFService.showSaveOptionsDialog(
+      pdfBytes: pdfBytes,
+      fileName: 'certificate_${widget.credentialId.substring(0, 8)}',
+      context: context,
+    );
+  }
+
+  Future<void> _shareCertificate() async {
+    setState(() => _isGeneratingPDF = true);
+
+    final qrImageBytes = await _generateQRCodeImage();
+
+    final pdfBytes = await PDFService.generateCertificatePDF(
+      credential: _credential!,
+      qrCodeImage: qrImageBytes,
+    );
+
+    await PDFService.saveAndSharePDF(
+      pdfBytes: pdfBytes,
+      fileName: 'certificate_${widget.credentialId.substring(0, 8)}',
+      context: context,
+    );
+
+    setState(() => _isGeneratingPDF = false);
+  }
+
+  Future<void> _showActionDialog({
+    required String title,
+    required String message,
+    required String actionText,
+    required Color actionColor,
+    required Future<void> Function(String?) onConfirm,
+    bool showReasonField = false,
+  }) async {
+    String? reason;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(title),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(message),
+                if (showReasonField) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    onChanged: (value) => reason = value,
+                    decoration: const InputDecoration(
+                      labelText: 'Reason *',
+                      hintText: 'Enter reason for this action',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
               ),
-              IconButton(
-                icon: const Icon(Icons.copy, size: 18),
+              ElevatedButton(
                 onPressed: () {
-                  Clipboard.setData(ClipboardData(text: value));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Copied to clipboard')),
-                  );
+                  if (showReasonField && (reason == null || reason!.isEmpty)) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please provide a reason')),
+                    );
+                    return;
+                  }
+                  Navigator.pop(context);
+                  onConfirm(reason);
                 },
+                style: ElevatedButton.styleFrom(backgroundColor: actionColor),
+                child: Text(actionText),
               ),
             ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHistoryTimeline() {
-    if (_isLoadingHistory) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_history.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: Text(
-            'No transaction history available',
-            style: TextStyle(color: AppTheme.onSurfaceVariant),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.outlineVariant),
-      ),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _history.length,
-        separatorBuilder: (context, index) => const Divider(height: 0),
-        itemBuilder: (context, index) {
-          final item = _history[index];
-          return ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _getActionColor(item['action']).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                _getActionIcon(item['action']),
-                color: _getActionColor(item['action']),
-              ),
-            ),
-            title: Text(item['action']),
-            subtitle: Text(item['actor']),
-            trailing: Text(
-              _formatDate(item['timestamp']),
-              style: TextStyle(fontSize: 12, color: AppTheme.onSurfaceVariant),
-            ),
           );
         },
       ),
     );
   }
 
-  IconData _getActionIcon(String action) {
-    switch (action) {
-      case 'ISSUED':
-        return Icons.add_circle;
-      case 'VERIFIED':
-        return Icons.verified;
-      case 'REVOKED':
-        return Icons.cancel;
-      default:
-        return Icons.history;
-    }
+  Future<void> _revokeCredential() async {
+    await _showActionDialog(
+      title: 'Revoke Certificate',
+      message:
+          'Are you sure you want to revoke this certificate? This action can be reversed later.',
+      actionText: 'Revoke',
+      actionColor: AppTheme.error,
+      showReasonField: true,
+      onConfirm: (reason) async {
+        setState(() => _isActionInProgress = true);
+
+        final result = await _apiService.revokeCredential(
+          credentialId: widget.credentialId,
+          reason: reason ?? 'No reason provided',
+        );
+
+        setState(() => _isActionInProgress = false);
+
+        if (mounted) {
+          if (result['success']) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Certificate revoked successfully'),
+                backgroundColor: AppTheme.secondary,
+              ),
+            );
+            await _fetchCredentialDetails();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['error']),
+                backgroundColor: AppTheme.error,
+              ),
+            );
+          }
+        }
+      },
+    );
   }
 
-  Color _getActionColor(String action) {
-    switch (action) {
-      case 'ISSUED':
-        return AppTheme.primary;
-      case 'VERIFIED':
-        return AppTheme.secondary;
-      case 'REVOKED':
-        return AppTheme.error;
-      default:
-        return AppTheme.outline;
-    }
+  Future<void> _suspendCredential() async {
+    await _showActionDialog(
+      title: 'Suspend Certificate',
+      message:
+          'Are you sure you want to suspend this certificate? It will be temporarily disabled.',
+      actionText: 'Suspend',
+      actionColor: Colors.orange,
+      showReasonField: true,
+      onConfirm: (reason) async {
+        setState(() => _isActionInProgress = true);
+
+        final result = await _apiService.suspendCredential(
+          credentialId: widget.credentialId,
+          reason: reason ?? 'No reason provided',
+        );
+
+        setState(() => _isActionInProgress = false);
+
+        if (mounted) {
+          if (result['success']) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Certificate suspended successfully'),
+                backgroundColor: AppTheme.secondary,
+              ),
+            );
+            await _fetchCredentialDetails();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['error']),
+                backgroundColor: AppTheme.error,
+              ),
+            );
+          }
+        }
+      },
+    );
   }
 
-  String _formatDate(String isoString) {
-    final date = DateTime.parse(isoString);
-    final now = DateTime.now();
-    final difference = now.difference(date);
+  Future<void> _reinstateCredential() async {
+    await _showActionDialog(
+      title: 'Reinstate Certificate',
+      message:
+          'Are you sure you want to reinstate this certificate? It will become active again.',
+      actionText: 'Reinstate',
+      actionColor: AppTheme.secondary,
+      showReasonField: false,
+      onConfirm: (_) async {
+        setState(() => _isActionInProgress = true);
 
-    if (difference.inDays > 30) {
-      return '${date.month}/${date.day}/${date.year}';
-    } else if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
+        final result = await _apiService.reinstateCredential(
+          credentialId: widget.credentialId,
+        );
+
+        setState(() => _isActionInProgress = false);
+
+        if (mounted) {
+          if (result['success']) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Certificate reinstated successfully'),
+                backgroundColor: AppTheme.secondary,
+              ),
+            );
+            await _fetchCredentialDetails();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result['error']),
+                backgroundColor: AppTheme.error,
+              ),
+            );
+          }
+        }
+      },
+    );
   }
 
-  Widget _buildActionButtons() {
-    return Column(
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final isAdmin = authProvider.currentUser?.isInstitutionAdmin ?? false;
+    final status = _credential?['status'] ?? '';
+    final qrData = _credential?['credentialId'] ?? widget.credentialId;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Credential Details'),
+        actions: [
+          if (!_isLoading && !_isActionInProgress)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                switch (value) {
+                  case 'refresh':
+                    _fetchCredentialDetails();
+                    break;
+                  case 'share':
+                    _shareCertificate();
+                    break;
+                  case 'download':
+                    _downloadPDF();
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'refresh',
+                  child: Row(
+                    children: [
+                      Icon(Icons.refresh, size: 20),
+                      SizedBox(width: 8),
+                      Text('Refresh'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'share',
+                  child: Row(
+                    children: [
+                      Icon(Icons.share, size: 20),
+                      SizedBox(width: 8),
+                      Text('Share Certificate'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'download',
+                  child: Row(
+                    children: [
+                      Icon(Icons.download, size: 20),
+                      SizedBox(width: 8),
+                      Text('Download PDF'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: AppTheme.error),
+                  const SizedBox(height: 16),
+                  Text(_error!),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _fetchCredentialDetails,
+                    child: const Text('Try Again'),
+                  ),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Status Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: _getStatusColor(status)),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          _getStatusIcon(status),
+                          size: 48,
+                          color: _getStatusColor(status),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          status.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _getStatusColor(status),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // QR Code Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.outlineVariant),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'VERIFICATION QR CODE',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppTheme.outlineVariant,
+                              ),
+                            ),
+                            child: QrImageView(
+                              data: qrData,
+                              version: QrVersions.auto,
+                              size: 180,
+                              backgroundColor: Colors.white,
+                              eyeStyle: const QrEyeStyle(
+                                color: Color(0xFF00236F),
+                                eyeShape: QrEyeShape.square,
+                              ),
+                              dataModuleStyle: const QrDataModuleStyle(
+                                color: Color(0xFF00236F),
+                                dataModuleShape: QrDataModuleShape.square,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Scan this QR code to verify the certificate',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Credential Details Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.outlineVariant),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'CREDENTIAL INFORMATION',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        _buildDetailRow(
+                          'Credential ID',
+                          _credential?['credentialId'] ?? 'N/A',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          'Student Name',
+                          _credential?['studentName'] ?? 'N/A',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          'Student ID',
+                          _credential?['studentId'] ?? 'N/A',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          'Degree',
+                          _credential?['degree'] ?? 'N/A',
+                        ),
+                        const SizedBox(height: 12),
+                        if (_credential?['degreeClass'] != null &&
+                            _credential?['degreeClass'] != '')
+                          _buildDetailRow(
+                            'Degree Class',
+                            _credential?['degreeClass'],
+                          ),
+                        if (_credential?['cgpa'] != null &&
+                            _credential!['cgpa'].toString().isNotEmpty)
+                          _buildDetailRow(
+                            'CGPA',
+                            _credential!['cgpa'].toString(),
+                          ),
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          'Institution',
+                          _credential?['institutionName'] ?? 'N/A',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          'Graduation Date',
+                          _formatDate(_credential?['graduationDate'] ?? ''),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          'Issued At',
+                          _formatDateTime(_credential?['issuedAt'] ?? ''),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          'Issued By',
+                          _credential?['issuedBy'] ?? 'N/A',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: Icons.picture_as_pdf,
+                          label: 'Download PDF',
+                          color: AppTheme.primary,
+                          onPressed: _downloadPDF,
+                          isLoading: _isGeneratingPDF,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: Icons.share,
+                          label: 'Share',
+                          color: AppTheme.secondary,
+                          onPressed: _shareCertificate,
+                          isLoading: _isGeneratingPDF,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Admin Actions (Only visible to Institution Admins)
+                  if (isAdmin) ...[
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'ADMIN ACTIONS',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    if (status == 'active') ...[
+                      _buildActionButton(
+                        label: 'Revoke Certificate',
+                        color: AppTheme.error,
+                        onPressed: _revokeCredential,
+                        isFullWidth: true,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildActionButton(
+                        label: 'Suspend Certificate',
+                        color: Colors.orange,
+                        onPressed: _suspendCredential,
+                        isFullWidth: true,
+                      ),
+                    ] else if (status == 'revoked' ||
+                        status == 'suspended') ...[
+                      _buildActionButton(
+                        icon: Icons.restore,
+                        label: 'Reinstate Certificate',
+                        color: AppTheme.secondary,
+                        onPressed: _reinstateCredential,
+                        isFullWidth: true,
+                      ),
+                    ],
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // Footer
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.security, size: 20, color: AppTheme.primary),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'This certificate is recorded on the CredChain Blockchain Network',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ElevatedButton.icon(
-          onPressed: () => _verifyAgain(),
-          icon: const Icon(Icons.qr_code_scanner),
-          label: const Text('Verify Credential Again'),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant),
           ),
         ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: () => _downloadPDF(),
-          icon: const Icon(Icons.picture_as_pdf),
-          label: const Text('Download PDF Certificate'),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
           ),
         ),
       ],
     );
   }
 
-  void _verifyAgain() {
-    Navigator.pop(context);
+  Widget _buildActionButton({
+    IconData? icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+    bool isFullWidth = false,
+    bool isLoading = false,
+  }) {
+    final button = OutlinedButton.icon(
+      onPressed: isLoading ? null : onPressed,
+      icon: isLoading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(icon, size: 20),
+      label: Text(isLoading ? 'Processing...' : label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        side: BorderSide(color: color),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+    );
+
+    if (isFullWidth) {
+      return SizedBox(width: double.infinity, child: button);
+    }
+    return button;
   }
 
-  Future<void> _downloadPDF() async {
-    // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    // Generate QR code image
-    final qrBytes = await QRService.generateQRCodeAsBytes(
-      widget.certificate.transactionId,
-    );
-
-    // Generate PDF
-    final pdfBytes = await PDFService.generateCertificatePDF(
-      certificate: widget.certificate,
-      qrCodeImage: qrBytes,
-    );
-
-    // Save PDF
-    final file = await PDFService.savePDF(
-      pdfBytes,
-      'certificate_${widget.certificate.transactionId.substring(0, 8)}',
-    );
-
-    // Close dialog
-    if (context.mounted) Navigator.pop(context);
-
-    if (file != null && context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('PDF saved successfully')));
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return AppTheme.secondary;
+      case 'revoked':
+        return AppTheme.error;
+      case 'suspended':
+        return Colors.orange;
+      default:
+        return AppTheme.outline;
     }
   }
 
-  Future<void> _shareCertificate() async {
-    // Generate PDF and share
-    final qrBytes = await QRService.generateQRCodeAsBytes(
-      widget.certificate.transactionId,
-    );
-    final pdfBytes = await PDFService.generateCertificatePDF(
-      certificate: widget.certificate,
-      qrCodeImage: qrBytes,
-    );
-    await PDFService.sharePDF(
-      pdfBytes,
-      'certificate_${widget.certificate.transactionId.substring(0, 8)}',
-    );
+  IconData _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return Icons.check_circle;
+      case 'revoked':
+        return Icons.cancel;
+      case 'suspended':
+        return Icons.pause_circle;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
+  String _formatDate(String dateString) {
+    if (dateString.isEmpty) return 'N/A';
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateString.split('T')[0];
+    }
+  }
+
+  String _formatDateTime(String dateTimeString) {
+    if (dateTimeString.isEmpty) return 'N/A';
+    try {
+      final date = DateTime.parse(dateTimeString);
+      final localDate = date.toLocal();
+      return '${localDate.year}-${localDate.month.toString().padLeft(2, '0')}-${localDate.day.toString().padLeft(2, '0')} '
+          '${localDate.hour.toString().padLeft(2, '0')}:${localDate.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateTimeString;
+    }
   }
 }

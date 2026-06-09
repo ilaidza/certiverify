@@ -64,3 +64,30 @@ class User {
   bool get isInstitutionAdmin => role == UserRole.institutionAdmin;
   bool get isVerifier => role == UserRole.verifier;
 }
+
+// Helper methods
+extension UserRoleExtension on UserRole {
+  String get apiValue {
+    switch (this) {
+      case UserRole.student:
+        return 'graduate';
+      case UserRole.institutionAdmin:
+        return 'institution_admin';
+      case UserRole.verifier:
+        return 'external_verifier';
+    }
+  }
+
+  static UserRole fromApiValue(String value) {
+    switch (value) {
+      case 'graduate':
+        return UserRole.student;
+      case 'institution_admin':
+        return UserRole.institutionAdmin;
+      case 'external_verifier':
+        return UserRole.verifier;
+      default:
+        return UserRole.verifier;
+    }
+  }
+}

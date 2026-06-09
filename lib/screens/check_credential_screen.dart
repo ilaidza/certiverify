@@ -1,3 +1,4 @@
+import 'package:certiverify/screens/certificate_details_screen.dart';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../utils/theme.dart';
@@ -19,6 +20,8 @@ class _CheckCredentialScreenState extends State<CheckCredentialScreen> {
   bool _hasChecked = false;
   Map<String, dynamic>? _result;
   String? _error;
+
+  get certificate => null;
 
   @override
   void initState() {
@@ -261,12 +264,14 @@ class _CheckCredentialScreenState extends State<CheckCredentialScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () {
                       // Navigate to full certificate details
-                      // Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (context) => CertificateDetailsScreen(credentialId: credentialId),
-                      //   ),
-                      // );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CredentialDetailsScreen(
+                            credentialId: credentialId,
+                          ),
+                        ),
+                      );
                     },
                     icon: const Icon(Icons.visibility),
                     label: const Text('View Full Details'),

@@ -1,3 +1,4 @@
+import 'package:certiverify/services/permission_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -9,6 +10,9 @@ import 'services/storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  //Request permission
+  await PermissionService.checkAndRequestPermissions();
 
   // Initialize Hive for local storage
   await Hive.initFlutter();

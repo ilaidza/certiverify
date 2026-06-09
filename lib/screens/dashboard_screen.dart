@@ -1,5 +1,7 @@
 import 'package:certiverify/models/certificate.dart';
+import 'package:certiverify/screens/certificate_details_screen.dart';
 import 'package:certiverify/screens/check_credential_screen.dart';
+import 'package:certiverify/screens/graduate_certificates_screen.dart';
 import 'package:certiverify/screens/institution_screen.dart';
 import 'package:certiverify/screens/issue__certificate_screen.dart';
 import 'package:certiverify/screens/my_certificate_screen.dart';
@@ -35,7 +37,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.currentUser;
+    // final user = authProvider.currentUser;
 
     return Scaffold(
       body: _screens[_currentIndex],
@@ -70,7 +72,7 @@ class _HomeContent extends StatelessWidget {
           ),
           CircleAvatar(
             radius: 16,
-            backgroundColor: AppTheme.primaryContainer.withOpacity(0.2),
+            // backgroundColor: AppTheme.primaryContainer.withOpacity(0.2),
             child: Text(
               user?.name[0].toUpperCase() ?? 'U',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
@@ -98,7 +100,7 @@ class _HomeContent extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(
-                      isStudent ? Icons.school : Icons.verified,
+                      isStudent ? Icons.school : null,
                       color: Colors.white,
                       size: 32,
                     ),
@@ -133,7 +135,13 @@ class _HomeContent extends StatelessWidget {
                                 color: Colors.white70,
                                 fontSize: 14,
                               ),
-                            ),
+                            )
+                          else if (isAdmin)
+                            Text(
+                              "You have ${certProvider.userCertificates.length} active certificates.",
+                            )
+                          else
+                            Text(" "),
                         ],
                       ),
                     ),
@@ -167,24 +175,52 @@ class _HomeContent extends StatelessWidget {
                   ],
                 )
               else
-                Row(
+                Column(
                   children: [
-                    Expanded(
-                      child: _StatCard(
-                        title: 'Total Issued',
-                        value: '${certProvider.userCertificates.length}',
-                        icon: Icons.school,
-                        color: AppTheme.primary,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            title: 'TOTAL ISSUED',
+                            value: '${certProvider.userCertificates.length}',
+                            icon: Icons.school,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _StatCard(
+                            title: 'VERIFIED',
+                            value: '${certProvider.totalVerificationCount}',
+                            icon: Icons.verified,
+                            color: AppTheme.secondary,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _StatCard(
-                        title: 'Verifications',
-                        value: '${certProvider.totalVerificationCount}',
-                        icon: Icons.verified,
-                        color: AppTheme.secondary,
-                      ),
+
+                    SizedBox(height: 25),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            title: 'GRADUATES',
+                            value: '30',
+                            icon: Icons.people_alt_outlined,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _StatCard(
+                            title: 'BLOCKCHAIN',
+                            value: 'Healthy',
+                            icon: Icons.dashboard_outlined,
+                            color: AppTheme.secondary,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -205,8 +241,11 @@ class _HomeContent extends StatelessWidget {
                     Expanded(
                       child: _ActionButton(
                         icon: Icons.qr_code_scanner,
-                        label: 'VERIFY QR',
+                        label: 'Verify QR',
                         color: AppTheme.primary,
+                        backgroundColor: AppTheme.primaryContainer.withOpacity(
+                          0.1,
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -222,9 +261,19 @@ class _HomeContent extends StatelessWidget {
                       child: _ActionButton(
                         icon: Icons.history_edu,
                         label: 'MY CERTS',
-                        color: AppTheme.secondary,
+                        color: AppTheme.primary,
+                        backgroundColor: AppTheme.primaryContainer.withOpacity(
+                          0.1,
+                        ),
                         onTap: () {
                           // Navigate to certificates
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const GraduateCredentialsScreen(),
+                            ),
+                          );
                         },
                       ),
                     ),
@@ -239,8 +288,10 @@ class _HomeContent extends StatelessWidget {
                         Expanded(
                           child: _ActionButton(
                             icon: Icons.qr_code_scanner,
-                            label: 'SCAN QR CODE',
+                            label: 'Scan Qr Code',
                             color: AppTheme.primary,
+                            backgroundColor: AppTheme.primaryContainer
+                                .withOpacity(0.1),
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -255,14 +306,18 @@ class _HomeContent extends StatelessWidget {
                         Expanded(
                           child: _ActionButton(
                             icon: Icons.history_edu,
-                            label: 'MY CERTS',
-                            color: AppTheme.secondary,
+                            label: 'My Certs',
+                            color: AppTheme.primary,
+                            backgroundColor: AppTheme.primaryContainer
+                                .withOpacity(0.1),
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      const MyCertificatesScreen(),
+                                      const CredentialDetailsScreen(
+                                        credentialId: '<CREDENTIAL_ID>',
+                                      ),
                                 ),
                               );
                             },
@@ -276,8 +331,9 @@ class _HomeContent extends StatelessWidget {
                         Expanded(
                           child: _ActionButton(
                             icon: Icons.add_moderator,
-                            label: 'ISSUE CERTIFICATE',
-                            color: const Color(0xFF6B21A5),
+                            label: 'Issue Credential',
+                            color: AppTheme.primary,
+                            backgroundColor: AppTheme.surface,
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -294,8 +350,10 @@ class _HomeContent extends StatelessWidget {
                         Expanded(
                           child: _ActionButton(
                             icon: Icons.verified,
-                            label: 'CHECK CREDENTIAL',
-                            color: const Color(0xFF0EA5E9),
+                            label: 'Check Credential',
+                            color: AppTheme.primary,
+                            backgroundColor: AppTheme.primaryContainer
+                                .withOpacity(0.1),
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -307,7 +365,6 @@ class _HomeContent extends StatelessWidget {
                             },
                           ),
                         ),
-                        const SizedBox(width: 12),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -317,6 +374,7 @@ class _HomeContent extends StatelessWidget {
                           child: _ActionButton(
                             icon: Icons.cancel,
                             label: 'REVOKE CERTIFICATE',
+                            backgroundColor: AppTheme.error.withOpacity(0.01),
                             color: AppTheme.error,
                             onTap: () {
                               Navigator.push(
@@ -334,7 +392,9 @@ class _HomeContent extends StatelessWidget {
                           child: _ActionButton(
                             icon: Icons.account_balance,
                             label: 'INSTITUTIONS',
-                            color: const Color(0xFFF59E0B),
+                            color: AppTheme.primary,
+                            backgroundColor: AppTheme.primaryContainer
+                                .withOpacity(0.1),
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -357,8 +417,11 @@ class _HomeContent extends StatelessWidget {
                     Expanded(
                       child: _ActionButton(
                         icon: Icons.qr_code_scanner,
-                        label: 'SCAN QR CODE',
+                        label: 'Scan QR',
                         color: AppTheme.primary,
+                        backgroundColor: AppTheme.primaryContainer.withOpacity(
+                          0.1,
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -373,8 +436,11 @@ class _HomeContent extends StatelessWidget {
                     Expanded(
                       child: _ActionButton(
                         icon: Icons.verified,
-                        label: 'VERIFY CREDENTIAL',
-                        color: AppTheme.secondary,
+                        label: 'Verify Credential',
+                        color: AppTheme.primary,
+                        backgroundColor: AppTheme.primaryContainer.withOpacity(
+                          0.1,
+                        ),
                         onTap: () {},
                       ),
                     ),
@@ -432,7 +498,6 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.outlineVariant),
         boxShadow: [
@@ -471,6 +536,7 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final Color backgroundColor;
   final VoidCallback onTap;
 
   const _ActionButton({
@@ -478,6 +544,7 @@ class _ActionButton extends StatelessWidget {
     required this.label,
     required this.color,
     required this.onTap,
+    required this.backgroundColor,
   });
 
   @override

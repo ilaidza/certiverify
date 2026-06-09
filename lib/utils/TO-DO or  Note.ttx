@@ -1,0 +1,50 @@
+TO-DO 
+
+1. Qr Scanner to pass the QR hash value and verify a document valid or invalid 
+2. Work on the UI to look like what we have in the UI design 
+3. Certificate format 
+4. Splash screen load time 
+5. Update dashboard to Update the dashboard data with real data 
+6. Remove profile from bottom Nav and direct user to profile through dp
+7. 
+
+
+
+
+TEST
+
+1. Download certificate as Pdf and view in local storage 
+2. Credential issuance 
+3. Unit testing on each components
+
+
+
+WHAT WE CAN ADD 
+
+1. Work on in app Notification 
+2. 
+
+
+
+App Walkthrough / Roadmap
+
+Certificate issuance
+1. Institution register with Institution details
+2. Institution issue certificate by entering students credential details 
+3. Credential is issued by storing the details and computing a Hashfunction and using the hash value to generate a Qr code on certificate
+5. The Hash value is then stored in the blockchain using Hyperledger (generating a smart contract to seal the transaction)
+6. Then the PDF is downloaded by Institution Admin
+
+Certificate Verification by External verifier
+1. External verifier registers with basic info 
+2. He clicks on the verify Qr button
+3. A QR scanner pops up and scans QR code on certificate
+4. The app verifies the certificate and shows if certificate is valid or not and maybe suspended or revoked or active 
+
+
+Certificate Verification by graduate
+1. Graduate registers with his info as a student of an institution
+2. He clicks on the verify Qr button
+3. A QR scanner pops up and scans QR code on certificate
+4. The app verifies the certificate and shows if certificate is valid or not and maybe suspended or revoked or active 
+

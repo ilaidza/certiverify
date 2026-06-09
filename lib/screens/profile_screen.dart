@@ -20,6 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _offlineStorageEnabled = true;
   String _selectedLanguage = 'en';
   int _pendingSyncCount = 0;
+  bool _isLoggingOut = false; // Add loading state
 
   @override
   void initState() {
@@ -47,10 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-            ),
+            onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
             child: const Text('Logout'),
           ),
@@ -59,11 +57,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirm == true) {
+      setState(() => _isLoggingOut = true);
+
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.logout();
+
       if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
+        // Clear entire navigation stack and go to login
+        Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
           (route) => false,
         );
@@ -182,7 +183,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Settings sections
             const SizedBox(height: 16),
 
             // Account section
@@ -332,16 +332,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Logout button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: OutlinedButton.icon(
-                onPressed: _logout,
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
+                onPressed: _isLoggingOut ? null : _logout,
+                icon: _isLoggingOut
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.logout),
+                label: Text(_isLoggingOut ? 'Logging out...' : 'Logout'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.primary,
+                  foregroundColor: AppTheme.background,
+                  backgroundColor: AppTheme.primary,
                   side: BorderSide(color: AppTheme.primary),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 50,
+                    horizontal: 130,
                     vertical: 14,
                   ),
                 ),

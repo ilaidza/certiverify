@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/theme.dart';
 import 'dashboard_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -61,15 +62,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _fillStudentCredentials() {
     setState(() {
-      _emailController.text = 'student@example.com';
-      _passwordController.text = 'student123';
+      _emailController.text = 'verifier_elijah@company.com';
+      _passwordController.text = 'Test1234!';
     });
   }
 
   void _fillAdminCredentials() {
     setState(() {
-      _emailController.text = 'registrar@unilag.edu.ng';
-      _passwordController.text = 'registrar123';
+      _emailController.text = 'admin_test_futa@university.edu.ng';
+      _passwordController.text = 'Test1234!';
     });
   }
 
@@ -128,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Email Address',
                         prefixIcon: Icon(Icons.email),
-                        hintText: 'registrar@unilag.edu.ng',
+                        hintText: 'newadmin@test.com',
                       ),
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) {
@@ -192,9 +193,46 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: Row(
+                                children: [
+                                  CircularProgressIndicator(strokeWidth: 2),
+                                  SizedBox(width: 4),
+                                  Text('Logging in...'),
+                                ],
+                              ),
                             )
-                          : const Text('Sign In'),
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.exit_to_app_outlined),
+                                SizedBox(width: 8),
+                                Text('Secure Login'),
+                              ],
+                            ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Register link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Need an account?',
+                          style: TextStyle(color: AppTheme.onSurfaceVariant),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RegisterScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text('Register'),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 16),
@@ -419,14 +457,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Email: registrar@unilag.edu.ng',
+                                  'Email: newadmin@test.com',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontFamily: 'monospace',
                                   ),
                                 ),
                                 Text(
-                                  'Password: registrar123',
+                                  'Password: admin123',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontFamily: 'monospace',
