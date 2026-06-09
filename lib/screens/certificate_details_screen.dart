@@ -9,7 +9,11 @@ import '../utils/theme.dart';
 class CertificateDetailsScreen extends StatefulWidget {
   final Certificate certificate;
 
-  const CertificateDetailsScreen({super.key, required this.certificate});
+  const CertificateDetailsScreen({
+    super.key,
+    required this.certificate,
+    required credentialId,
+  });
 
   @override
   State<CertificateDetailsScreen> createState() =>
