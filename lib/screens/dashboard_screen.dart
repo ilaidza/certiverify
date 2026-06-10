@@ -131,7 +131,7 @@ class _HomeContentState extends State<_HomeContent> {
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: isStudent
-                            ? AppTheme.secondaryContainer
+                            ? AppTheme.primary
                             : AppTheme.primaryContainer,
                         borderRadius: BorderRadius.circular(16),
                       ),
