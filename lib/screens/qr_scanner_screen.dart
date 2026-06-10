@@ -1,5 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
+import '../providers/certificate_provider.dart';
+import '../services/api_service.dart';
 import '../utils/theme.dart';
 import 'verification_result_screen.dart';
 
@@ -15,6 +20,9 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   late MobileScannerController _scannerController;
   bool _isScanning = true;
   bool _flashlightOn = false;
+  bool _isProcessing = false;
+
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
@@ -39,36 +47,74 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
-    if (!_isScanning) return;
+    if (!_isScanning || _isProcessing) return;
 
     final barcode = capture.barcodes.first;
     final scannedData = barcode.rawValue;
 
     if (scannedData != null && scannedData.isNotEmpty) {
-      setState(() => _isScanning = false);
+      setState(() {
+        _isScanning = false;
+        _isProcessing = true;
+      });
 
-      // Extract transaction ID from QR code
-      String transactionId = scannedData;
-      if (scannedData.startsWith('https://')) {
-        transactionId = scannedData.split('/').last;
+      // Extract credential ID from QR code
+      // The QR code could contain just the ID or a URL
+      String credentialId = scannedData;
+
+      // If it's a URL, extract the ID from the end
+      if (scannedData.startsWith('http')) {
+        final uri = Uri.tryParse(scannedData);
+        if (uri != null) {
+          // Get the last part of the path
+          credentialId = uri.pathSegments.last;
+        }
       }
 
-      // Show loading indicator
-      if (!mounted) return;
+      // Also handle JSON payload format
+      if (scannedData.contains('"tx_id"')) {
+        try {
+          final jsonData = jsonDecode(scannedData);
+          credentialId = jsonData['tx_id'] ?? credentialId;
+        } catch (e) {
+          // Not JSON, use as is
+        }
+      }
 
-      // Navigate to verification result
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              VerificationResultScreen(transactionId: transactionId),
-        ),
-      );
+      print('Extracted Credential ID: $credentialId');
 
-      // Resume scanning
-      setState(() => _isScanning = true);
-      _scannerController.start();
+      // Verify the credential with the API
+      final result = await _apiService.verifyCredential(credentialId);
+
+      setState(() => _isProcessing = false);
+
+      if (mounted) {
+        // Navigate to verification result screen
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VerificationResultScreen(
+              credentialId: credentialId,
+              verificationResult: result,
+            ),
+          ),
+        );
+
+        // Resume scanning after returning
+        setState(() {
+          _isScanning = true;
+          _isProcessing = false;
+        });
+        _scannerController.start();
+      }
     }
+  }
+
+  Future<void> _pickFromGallery() async {
+    // For gallery image picker - can be implemented later
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Gallery import coming soon')));
   }
 
   @override
@@ -94,7 +140,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
           // Overlay with cutout
           CustomPaint(
             painter: ScannerOverlayPainter(),
-            child: SizedBox(width: double.infinity, height: double.infinity),
+            child: Container(width: double.infinity, height: double.infinity),
           ),
 
           // Scanner frame corners
@@ -230,6 +276,25 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             ),
           ),
 
+          // Loading overlay
+          if (_isProcessing)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text(
+                      'Verifying credential...',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // Instructions text
           Positioned(
             bottom: 120,
@@ -245,7 +310,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
+                child: const Text(
                   'Position QR code within the frame',
                   style: TextStyle(color: Colors.white, fontSize: 14),
                 ),
@@ -260,7 +325,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             right: 0,
             child: Center(
               child: OutlinedButton.icon(
-                onPressed: () => _pickFromGallery(),
+                onPressed: _pickFromGallery,
                 icon: const Icon(Icons.photo_library),
                 label: const Text('Upload from Gallery'),
                 style: OutlinedButton.styleFrom(
@@ -276,58 +341,6 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Future<void> _pickFromGallery() async {
-    // Implement gallery image picker for QR code scanning
-    // This would use image_picker package and QR code reading
-  }
-}
-
-class VerificationResultScreen extends StatelessWidget {
-  final String transactionId;
-
-  const VerificationResultScreen({Key? key, required this.transactionId})
-    : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Verification Result')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.check_circle_outline,
-                size: 72,
-                color: Colors.green,
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Transaction ID',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                transactionId,
-                style: const TextStyle(fontSize: 20),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              const Text('Verification complete.', textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Back to Scanner'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

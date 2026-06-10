@@ -526,6 +526,73 @@ class ApiService {
   /// Get graduate's specific credential
   // ==================== GRADUATE CREDENTIAL OPERATIONS ====================
 
+  // Add these methods to your existing ApiService class
+
+  /// Get total number of graduates (based on certificates issued)
+  Future<Map<String, dynamic>> getTotalGraduates() async {
+    try {
+      final response = await _dio.get('/api/v1/institution/credentials');
+
+      print('Get total graduates response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final credentials = data['credentials'] ?? [];
+        final pagination = data['pagination'];
+
+        // Total graduates is the total number of unique students with certificates
+        // or just the total count from pagination
+        final totalGraduates = pagination?['total'] ?? credentials.length;
+
+        return {
+          'success': true,
+          'total': totalGraduates,
+          'pagination': pagination,
+        };
+      }
+      return {'success': false, 'error': 'Failed to fetch graduates count'};
+    } on DioException catch (e) {
+      print('Get total graduates error: ${e.response?.data}');
+      return {
+        'success': false,
+        'error': e.response?.data['message'] ?? 'Network error',
+      };
+    }
+  }
+
+  /// Check blockchain health status
+  Future<Map<String, dynamic>> getHealthStatus() async {
+    try {
+      final response = await _dio.get('/health');
+
+      print('Health check response: ${response.statusCode}');
+      print('Health check data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        return {
+          'success': true,
+          'status': data['status'],
+          'service': data['service'],
+          'timestamp': data['timestamp'],
+          'isHealthy': data['status'] == 'healthy',
+        };
+      }
+      return {
+        'success': false,
+        'status': 'unhealthy',
+        'error': 'Health check failed',
+      };
+    } on DioException catch (e) {
+      print('Health check error: ${e.message}');
+      return {
+        'success': false,
+        'status': 'unhealthy',
+        'error': 'Cannot connect to blockchain service',
+      };
+    }
+  }
+
   /// Get graduate's specific credential details
   Future<Map<String, dynamic>> getGraduateCredential(
     String credentialId,

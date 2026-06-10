@@ -51,8 +51,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 // In dashboard_screen.dart, update the _HomeContent widget
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
   const _HomeContent();
+
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDashboardData();
+    });
+  }
+
+  Future<void> _loadDashboardData() async {
+    final certProvider = Provider.of<CertificateProvider>(
+      context,
+      listen: false,
+    );
+    await certProvider.loadDashboardData();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshData() async {
+    final certProvider = Provider.of<CertificateProvider>(
+      context,
+      listen: false,
+    );
+    await certProvider.loadDashboardData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +108,6 @@ class _HomeContent extends StatelessWidget {
           ),
           CircleAvatar(
             radius: 16,
-            // backgroundColor: AppTheme.primaryContainer.withOpacity(0.2),
             child: Text(
               user?.name[0].toUpperCase() ?? 'U',
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
@@ -82,404 +117,484 @@ class _HomeContent extends StatelessWidget {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => certProvider.fetchUserCertificates(),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome message
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: isStudent
-                      ? AppTheme.secondaryContainer
-                      : AppTheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
+        onRefresh: _refreshData,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      isStudent ? Icons.school : null,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    // Welcome message
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isStudent
+                            ? AppTheme.secondaryContainer
+                            : AppTheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
                         children: [
-                          Text(
-                            isStudent
-                                ? 'Welcome, ${user?.name ?? 'Student'}!'
-                                : 'Welcome back, ${user?.name.split(' ')[0] ?? 'User'}',
-                            style: const TextStyle(
+                          if (isStudent)
+                            const Icon(
+                              Icons.school,
                               color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
+                              size: 32,
+                            ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isStudent
+                                      ? 'Welcome, ${user?.name ?? 'Student'}!'
+                                      : 'Welcome back, ${user?.name.split(' ')[0] ?? 'User'}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                if (isStudent && user?.studentId != null)
+                                  Text(
+                                    'Student ID: ${user?.studentId}',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                if (!isStudent)
+                                  Text(
+                                    'Your credentials have been verified ${certProvider.totalVerificationCount} times this month.',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          if (isStudent && user?.studentId != null)
-                            Text(
-                              'Student ID: ${user?.studentId}',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
-                            ),
-                          if (!isStudent)
-                            Text(
-                              'Your credentials have been verified ${certProvider.totalVerificationCount} times this month.',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
-                            )
-                          else if (isAdmin)
-                            Text(
-                              "You have ${certProvider.userCertificates.length} active certificates.",
-                            )
-                          else
-                            Text(" "),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
 
-              const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-              // Stats cards (different for student vs admin)
-              if (isStudent)
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        title: 'My Certificates',
-                        value: '${certProvider.userCertificates.length}',
-                        icon: Icons.school,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _StatCard(
-                        title: 'Verifications',
-                        value: '${certProvider.totalVerificationCount}',
-                        icon: Icons.verified,
-                        color: AppTheme.secondary,
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            title: 'TOTAL ISSUED',
-                            value: '${certProvider.userCertificates.length}',
-                            icon: Icons.school,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _StatCard(
-                            title: 'VERIFIED',
-                            value: '${certProvider.totalVerificationCount}',
-                            icon: Icons.verified,
-                            color: AppTheme.secondary,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: 25),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatCard(
-                            title: 'GRADUATES',
-                            value: '30',
-                            icon: Icons.people_alt_outlined,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _StatCard(
-                            title: 'BLOCKCHAIN',
-                            value: 'Healthy',
-                            icon: Icons.dashboard_outlined,
-                            color: AppTheme.secondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-              const SizedBox(height: 24),
-
-              // Action buttons (different for student vs admin) on dashboard
-              Text(
-                'Quick Actions',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-
-              if (isStudent)
-                // Student Actions
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ActionButton(
-                        icon: Icons.qr_code_scanner,
-                        label: 'Verify QR',
-                        color: AppTheme.primary,
-                        backgroundColor: AppTheme.primaryContainer.withOpacity(
-                          0.1,
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const QRScannerScreen(),
+                    // Stats cards
+                    if (isStudent)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              title: 'My Certificates',
+                              value: '${certProvider.userCertificates.length}',
+                              icon: Icons.school,
+                              color: AppTheme.primary,
+                              subtitle: '',
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _ActionButton(
-                        icon: Icons.history_edu,
-                        label: 'MY CERTS',
-                        color: AppTheme.primary,
-                        backgroundColor: AppTheme.primaryContainer.withOpacity(
-                          0.1,
-                        ),
-                        onTap: () {
-                          // Navigate to certificates
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const GraduateCredentialsScreen(),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _StatCard(
+                              title: 'Verifications',
+                              value: '${certProvider.totalVerificationCount}',
+                              icon: Icons.verified,
+                              color: AppTheme.secondary,
+                              subtitle: '',
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                )
-              else if (isAdmin)
-                // Admin Actions
-                Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionButton(
-                            icon: Icons.qr_code_scanner,
-                            label: 'Scan Qr Code',
-                            color: AppTheme.primary,
-                            backgroundColor: AppTheme.primaryContainer
-                                .withOpacity(0.1),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const QRScannerScreen(),
+                          ),
+                        ],
+                      )
+                    else
+                      Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _StatCard(
+                                  title: 'TOTAL ISSUED',
+                                  value:
+                                      '${certProvider.userCertificates.length}',
+                                  icon: Icons.school,
+                                  color: AppTheme.primary,
+                                  subtitle: '',
                                 ),
-                              );
-                            },
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _StatCard(
+                                  title: 'VERIFIED',
+                                  value:
+                                      '${certProvider.totalVerificationCount}',
+                                  icon: Icons.verified,
+                                  color: AppTheme.secondary,
+                                  subtitle: '',
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ActionButton(
-                            icon: Icons.history_edu,
-                            label: 'My Certs',
-                            color: AppTheme.primary,
-                            backgroundColor: AppTheme.primaryContainer
-                                .withOpacity(0.1),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const CredentialDetailsScreen(
-                                        credentialId: '<CREDENTIAL_ID>',
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _StatCard(
+                                  title: 'GRADUATES',
+                                  value: '${certProvider.totalGraduates}',
+                                  icon: Icons.people_alt_outlined,
+                                  color: AppTheme.primary,
+                                  subtitle: '',
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _StatCard(
+                                  title: 'BLOCKCHAIN',
+                                  value: certProvider.blockchainStatus
+                                      .toUpperCase(),
+                                  icon: Icons.dashboard_outlined,
+                                  color: certProvider.isBlockchainHealthy
+                                      ? AppTheme.secondary
+                                      : AppTheme.error,
+                                  subtitle: certProvider.isBlockchainHealthy
+                                      ? 'Connected'
+                                      : 'Connection Issue',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                    const SizedBox(height: 24),
+
+                    // Action buttons
+                    Text(
+                      'Quick Actions',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+
+                    if (isStudent)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionButton(
+                              icon: Icons.qr_code_scanner,
+                              label: 'Verify QR',
+                              color: AppTheme.primary,
+                              backgroundColor: AppTheme.primaryContainer
+                                  .withOpacity(0.1),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const QRScannerScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _ActionButton(
+                              icon: Icons.history_edu,
+                              label: 'MY CERTS',
+                              color: AppTheme.primary,
+                              backgroundColor: AppTheme.primaryContainer
+                                  .withOpacity(0.1),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const GraduateCredentialsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      )
+                    else if (isAdmin)
+                      Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _ActionButton(
+                                  icon: Icons.qr_code_scanner,
+                                  label: 'Scan QR Code',
+                                  color: AppTheme.primary,
+                                  backgroundColor: AppTheme.primaryContainer
+                                      .withOpacity(0.1),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const QRScannerScreen(),
                                       ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionButton(
-                            icon: Icons.add_moderator,
-                            label: 'Issue Credential',
-                            color: AppTheme.primary,
-                            backgroundColor: AppTheme.surface,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const IssueCertificateScreen(),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _ActionButton(
+                                  icon: Icons.history_edu,
+                                  label: 'My Certs',
+                                  color: AppTheme.primary,
+                                  backgroundColor: AppTheme.primaryContainer
+                                      .withOpacity(0.1),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const MyCertificatesScreen(),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        Expanded(
-                          child: _ActionButton(
-                            icon: Icons.verified,
-                            label: 'Check Credential',
-                            color: AppTheme.primary,
-                            backgroundColor: AppTheme.primaryContainer
-                                .withOpacity(0.1),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const CheckCredentialScreen(),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _ActionButton(
+                                  icon: Icons.add_moderator,
+                                  label: 'Issue Credential',
+                                  color: AppTheme.primary,
+                                  backgroundColor: AppTheme.surface,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const IssueCertificateScreen(),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionButton(
-                            icon: Icons.cancel,
-                            label: 'REVOKE CERTIFICATE',
-                            backgroundColor: AppTheme.error.withOpacity(0.01),
-                            color: AppTheme.error,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const RevokeCertificateScreen(),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _ActionButton(
+                                  icon: Icons.verified,
+                                  label: 'Check Credential',
+                                  color: AppTheme.primary,
+                                  backgroundColor: AppTheme.primaryContainer
+                                      .withOpacity(0.1),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const CheckCredentialScreen(),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ActionButton(
-                            icon: Icons.account_balance,
-                            label: 'INSTITUTIONS',
-                            color: AppTheme.primary,
-                            backgroundColor: AppTheme.primaryContainer
-                                .withOpacity(0.1),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const InstitutionsScreen(),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _ActionButton(
+                                  icon: Icons.cancel,
+                                  label: 'REVOKE CERTIFICATE',
+                                  backgroundColor: AppTheme.error.withOpacity(
+                                    0.01,
+                                  ),
+                                  color: AppTheme.error,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const RevokeCertificateScreen(),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _ActionButton(
+                                  icon: Icons.account_balance,
+                                  label: 'INSTITUTIONS',
+                                  color: AppTheme.primary,
+                                  backgroundColor: AppTheme.primaryContainer
+                                      .withOpacity(0.1),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const InstitutionsScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              else
-                // Verifier Actions
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ActionButton(
-                        icon: Icons.qr_code_scanner,
-                        label: 'Scan QR',
-                        color: AppTheme.primary,
-                        backgroundColor: AppTheme.primaryContainer.withOpacity(
-                          0.1,
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const QRScannerScreen(),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionButton(
+                              icon: Icons.qr_code_scanner,
+                              label: 'Scan QR',
+                              color: AppTheme.primary,
+                              backgroundColor: AppTheme.primaryContainer
+                                  .withOpacity(0.1),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const QRScannerScreen(),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _ActionButton(
+                              icon: Icons.verified,
+                              label: 'Verify Credential',
+                              color: AppTheme.primary,
+                              backgroundColor: AppTheme.primaryContainer
+                                  .withOpacity(0.1),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const CheckCredentialScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
+
+                    const SizedBox(height: 24),
+
+                    // Recent activity
+                    Text(
+                      'Recent Activity',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _ActionButton(
-                        icon: Icons.verified,
-                        label: 'Verify Credential',
-                        color: AppTheme.primary,
-                        backgroundColor: AppTheme.primaryContainer.withOpacity(
-                          0.1,
+                    const SizedBox(height: 12),
+
+                    if (certProvider.recentVerifications.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text(
+                            isStudent
+                                ? 'No recent verifications of your certificates'
+                                : 'No recent activity',
+                            style: TextStyle(color: AppTheme.onSurfaceVariant),
+                          ),
                         ),
-                        onTap: () {},
-                      ),
-                    ),
+                      )
+                    else
+                      ...certProvider.recentVerifications
+                          .take(3)
+                          .map((cert) => _ActivityItem(certificate: cert)),
                   ],
                 ),
-
-              const SizedBox(height: 24),
-
-              // Recent activity
-              Text(
-                'Recent Activity',
-                style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 12),
-
-              if (certProvider.recentVerifications.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      isStudent
-                          ? 'No recent verifications of your certificates'
-                          : 'No recent activity',
-                      style: TextStyle(color: AppTheme.onSurfaceVariant),
-                    ),
-                  ),
-                )
-              else
-                ...certProvider.recentVerifications
-                    .take(3)
-                    .map((cert) => _ActivityItem(certificate: cert)),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
 
+// class _StatCard extends StatelessWidget {
+//   final String title;
+//   final String value;
+//   final IconData icon;
+//   final Color color;
+//   final String? subtitle;
+
+//   const _StatCard({
+//     required this.title,
+//     required this.value,
+//     required this.icon,
+//     required this.color,
+//     this.subtitle,
+//   });
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       width: double.infinity, // Add this to ensure proper width
+//       padding: const EdgeInsets.all(16),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(16),
+//         border: Border.all(color: AppTheme.outlineVariant),
+//         boxShadow: [
+//           BoxShadow(
+//             color: color.withOpacity(0.05),
+//             blurRadius: 10,
+//             offset: const Offset(0, 2),
+//           ),
+//         ],
+//       ),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Icon(icon, color: color),
+//           const SizedBox(height: 8),
+//           Text(
+//             title,
+//             style: Theme.of(
+//               context,
+//             ).textTheme.labelSmall?.copyWith(color: AppTheme.onSurfaceVariant),
+//           ),
+//           const SizedBox(height: 4),
+//           Text(
+//             value.isNotEmpty ? value : '0',
+//             style: Theme.of(
+//               context,
+//             ).textTheme.displayMedium?.copyWith(color: color, fontSize: 28),
+//             maxLines: 1,
+//             overflow: TextOverflow.ellipsis,
+//           ),
+//           if (subtitle != null) ...[
+//             const SizedBox(height: 4),
+//             Text(
+//               subtitle!,
+//               style: TextStyle(
+//                 fontSize: 10,
+//                 color: color.withOpacity(0.7),
+//               ),
+//               maxLines: 1,
+//               overflow: TextOverflow.ellipsis,
+//             ),
+//           ],
+//         ],
+//       ),
+//     );
+//   }
+// }
 class _StatCard extends StatelessWidget {
   final String title;
   final String value;
@@ -491,6 +606,7 @@ class _StatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
+    required String subtitle,
   });
 
   @override

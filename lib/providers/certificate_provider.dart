@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/certificate.dart';
 import '../services/storage_service.dart';
+import '../services/api_service.dart';
 
 class CertificateProvider extends ChangeNotifier {
   List<Certificate> _userCertificates = [];
   final List<Certificate> _recentVerifications = [];
   bool _isLoading = false;
+  final ApiService _apiService = ApiService();
 
   List<Certificate> get userCertificates => _userCertificates;
   List<Certificate> get recentVerifications => _recentVerifications;
@@ -43,6 +45,52 @@ class CertificateProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+
+
+  // Add these variables to your CertificateProvider class
+int _totalGraduates = 0;
+bool _isBlockchainHealthy = false;
+String _blockchainStatus = 'checking...';
+String _blockchainService = '';
+String _lastHealthCheck = '';
+
+int get totalGraduates => _totalGraduates;
+bool get isBlockchainHealthy => _isBlockchainHealthy;
+String get blockchainStatus => _blockchainStatus;
+String get blockchainService => _blockchainService;
+String get lastHealthCheck => _lastHealthCheck;
+
+// Add these methods to your CertificateProvider class
+Future<void> fetchTotalGraduates() async {
+  final result = await _apiService.getTotalGraduates();
+  if (result['success']) {
+    _totalGraduates = result['total'];
+    notifyListeners();
+  }
+}
+
+Future<void> fetchHealthStatus() async {
+  final result = await _apiService.getHealthStatus();
+  if (result['success']) {
+    _isBlockchainHealthy = result['isHealthy'];
+    _blockchainStatus = result['status'];
+    _blockchainService = result['service'];
+    _lastHealthCheck = result['timestamp'];
+  } else {
+    _isBlockchainHealthy = false;
+    _blockchainStatus = 'unhealthy';
+  }
+  notifyListeners();
+}
+
+// Call these when dashboard loads
+Future<void> loadDashboardData() async {
+  await Future.wait([
+    fetchTotalGraduates(),
+    fetchHealthStatus(),
+    fetchUserCertificates(),
+  ]);
+}
 
   Future<Certificate?> verifyCertificate(String transactionId) async {
     // Check offline first

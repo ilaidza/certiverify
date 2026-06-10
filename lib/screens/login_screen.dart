@@ -194,6 +194,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: 24,
                               height: 24,
                               child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                // mainAxisSize: MainAxisSize.min,
                                 children: [
                                   CircularProgressIndicator(strokeWidth: 2),
                                   SizedBox(width: 4),

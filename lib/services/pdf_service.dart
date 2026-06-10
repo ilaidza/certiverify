@@ -204,16 +204,16 @@ class PDFService {
                   pw.Column(
                     children: [
                       pw.Text('_____________________'),
-                      pw.Text('Registrar', style: pw.TextStyle(fontSize: 10)),
+                      pw.Text(
+                        'Vice-Chancellor',
+                        style: pw.TextStyle(fontSize: 10),
+                      ),
                     ],
                   ),
                   pw.Column(
                     children: [
                       pw.Text('_____________________'),
-                      pw.Text(
-                        'Vice-Chancellor',
-                        style: pw.TextStyle(fontSize: 10),
-                      ),
+                      pw.Text('Registrar', style: pw.TextStyle(fontSize: 10)),
                     ],
                   ),
                 ],

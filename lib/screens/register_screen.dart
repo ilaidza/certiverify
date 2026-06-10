@@ -36,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Graduate fields
   final _graduateFullNameController = TextEditingController();
   final _studentIdController = TextEditingController();
-  String _selectedInstitutionCode = '';
+  String _InstitutionName = TextEditingController() as String;
 
   String _userType = 'institution'; // 'institution', 'verifier', 'graduate'
   bool _isLoading = false;
@@ -45,17 +45,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmPassword = true;
 
   // Institution codes for dropdown
-  final List<Map<String, String>> _institutions = [
-    {'code': 'UNILAG', 'name': 'University of Lagos'},
-    {'code': 'UNN', 'name': 'University of Nigeria, Nsukka'},
-    {'code': 'OAU', 'name': 'Obafemi Awolowo University'},
-    {'code': 'ABU', 'name': 'Ahmadu Bello University'},
-    {'code': 'UI', 'name': 'University of Ibadan'},
-    {'code': 'FUTA', 'name': 'Federal University of Technology, Akure'},
-    {'code': 'UNIBEN', 'name': 'University of Benin'},
-    {'code': 'UNIMAID', 'name': 'University of Maiduguri'},
-    {'code': 'Other', 'name': 'Other Institution'},
-  ];
+  // final List<Map<String, String>> _institutions = [
+  //   {'code': 'UNILAG', 'name': 'University of Lagos'},
+  //   {'code': 'UNN', 'name': 'University of Nigeria, Nsukka'},
+  //   {'code': 'OAU', 'name': 'Obafemi Awolowo University'},
+  //   {'code': 'ABU', 'name': 'Ahmadu Bello University'},
+  //   {'code': 'UI', 'name': 'University of Ibadan'},
+  //   {'code': 'FUTA', 'name': 'Federal University of Technology, Akure'},
+  //   {'code': 'UNIBEN', 'name': 'University of Benin'},
+  //   {'code': 'UNIMAID', 'name': 'University of Maiduguri'},
+  //   {'code': 'TEST', 'name': 'Test University FUTA'},
+  //   {'code': 'Other', 'name': 'Other Institution'},
+  // ];
 
   // Generate timestamp for unique test data
   String get _timestamp =>
@@ -116,13 +117,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
     } else {
       setState(() {
-        _emailController.text = 'graduate_${timestamp}@student.com';
+        _emailController.text = '${timestamp}@student.com';
         _passwordController.text = 'Test1234!';
         _confirmPasswordController.text = 'Test1234!';
-        _graduateFullNameController.text = 'Jane Graduate';
+        _graduateFullNameController.text = '${timestamp}';
         _studentIdController.text =
-            'STUjane'; // This matches the issued credential student_id
-        _selectedInstitutionCode = 'FUTA';
+            'CSC/20/4835'; // This matches the issued credential student_id
+        _institutionNameController.text =
+            'Test1234!'
+            'TEST UNIVERSITY FUTA'; // This matches the issued credential institution_name
       });
     }
   }
@@ -170,7 +173,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         confirmPassword: _confirmPasswordController.text,
         fullName: _graduateFullNameController.text.trim(),
         studentId: _studentIdController.text.trim(),
-        institutionCode: _selectedInstitutionCode,
+        institutionCode: _institutionNameController.text.trim(),
       );
     }
 
@@ -571,26 +574,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : null,
                     ),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: _selectedInstitutionCode.isEmpty
-                          ? null
-                          : _selectedInstitutionCode,
+                    TextFormField(
+                      controller: _institutionNameController,
                       decoration: const InputDecoration(
                         labelText: 'Institution *',
                         prefixIcon: Icon(Icons.school),
+                        hintText:
+                            'e.g. Federal University of Technology, Akure',
                       ),
-                      items: _institutions.map((inst) {
-                        return DropdownMenuItem(
-                          value: inst['code'],
-                          child: Text('${inst['code']} - ${inst['name']}'),
-                        );
-                      }).toList(),
-                      onChanged: (value) =>
-                          setState(() => _selectedInstitutionCode = value!),
-                      validator: (value) => value == null
-                          ? 'Please select your institution'
+                      validator: (value) => value!.isEmpty
+                          ? 'Please enter your Institution'
                           : null,
                     ),
+                    // const SizedBox(height: 16),
+                    // DropdownButtonFormField<String>(
+                    //   value: _selectedInstitutionCode.isEmpty
+                    //       ? null
+                    //       : _selectedInstitutionCode,
+                    //   decoration: const InputDecoration(
+                    //     labelText: 'Institution *',
+                    //     prefixIcon: Icon(Icons.school),
+                    //   ),
+                    //   items: _institutions.map((inst) {
+                    //     return DropdownMenuItem(
+                    //       value: inst['code'],
+                    //       child: Text('${inst['code']} - ${inst['name']}'),
+                    //     );
+                    //   }).toList(),
+                    //   onChanged: (value) =>
+                    //       setState(() => _selectedInstitutionCode = value!),
+                    //   validator: (value) => value == null
+                    //       ? 'Please select your institution'
+                    //       : null,
+                    // ),
                     // Info box about existing credential
                     Container(
                       padding: const EdgeInsets.all(12),
