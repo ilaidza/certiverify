@@ -46,51 +46,44 @@ class CertificateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-
   // Add these variables to your CertificateProvider class
-int _totalGraduates = 0;
-bool _isBlockchainHealthy = false;
-String _blockchainStatus = 'checking...';
-String _blockchainService = '';
-String _lastHealthCheck = '';
+  int _totalGraduates = 0;
+  bool _isBlockchainHealthy = false;
+  String _blockchainStatus = 'checking...';
+  String _blockchainService = '';
+  String _lastHealthCheck = '';
 
-int get totalGraduates => _totalGraduates;
-bool get isBlockchainHealthy => _isBlockchainHealthy;
-String get blockchainStatus => _blockchainStatus;
-String get blockchainService => _blockchainService;
-String get lastHealthCheck => _lastHealthCheck;
+  int get totalGraduates => _totalGraduates;
+  bool get isBlockchainHealthy => _isBlockchainHealthy;
+  String get blockchainStatus => _blockchainStatus;
+  String get blockchainService => _blockchainService;
+  String get lastHealthCheck => _lastHealthCheck;
 
-// Add these methods to your CertificateProvider class
-Future<void> fetchTotalGraduates() async {
-  final result = await _apiService.getTotalGraduates();
-  if (result['success']) {
-    _totalGraduates = result['total'];
+  // Add these methods to your CertificateProvider class
+  Future<void> fetchTotalGraduates() async {
+    final result = await _apiService.getTotalGraduates();
+    if (result['success']) {
+      _totalGraduates = result['total'];
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchHealthStatus() async {
+    final result = await _apiService.getHealthStatus();
+    if (result['success']) {
+      _isBlockchainHealthy = result['isHealthy'];
+      _blockchainStatus = result['status'];
+      _blockchainService = result['service'];
+      _lastHealthCheck = result['timestamp'];
+    } else {
+      _isBlockchainHealthy = false;
+      _blockchainStatus = 'unhealthy';
+    }
     notifyListeners();
   }
-}
 
-Future<void> fetchHealthStatus() async {
-  final result = await _apiService.getHealthStatus();
-  if (result['success']) {
-    _isBlockchainHealthy = result['isHealthy'];
-    _blockchainStatus = result['status'];
-    _blockchainService = result['service'];
-    _lastHealthCheck = result['timestamp'];
-  } else {
-    _isBlockchainHealthy = false;
-    _blockchainStatus = 'unhealthy';
-  }
-  notifyListeners();
-}
-
-// Call these when dashboard loads
-Future<void> loadDashboardData() async {
-  await Future.wait([
-    fetchTotalGraduates(),
-    fetchHealthStatus(),
-    fetchUserCertificates(),
-  ]);
-}
+  // Call these when dashboard loads
+  // (loadDashboardData defined later to include recent activities)
 
   Future<Certificate?> verifyCertificate(String transactionId) async {
     // Check offline first
@@ -139,5 +132,39 @@ Future<void> loadDashboardData() async {
     _isLoading = false;
     notifyListeners();
     return true;
+  }
+
+  // Update the recentActivities getter and fetch method
+
+  List<Map<String, dynamic>> _recentActivities = [];
+  List<Map<String, dynamic>> get recentActivities => _recentActivities;
+
+  Future<void> fetchRecentActivities() async {
+    // First try to get real verification history
+    final activities = await _apiService.getVerificationHistory();
+
+    if (activities.isNotEmpty) {
+      _recentActivities = activities;
+    } else {
+      // Fallback: Use certificates as recent activity
+      _recentActivities = _userCertificates.map((cert) {
+        return {
+          'credential_id': cert.id,
+          'action': 'ISSUED',
+          'timestamp': cert.issuedAt.toIso8601String(),
+          'verifier': cert.institution,
+          'status': 'success',
+          'student_name': cert.studentName,
+          'degree': cert.degree,
+        };
+      }).toList();
+
+      // Sort by most recent first
+      _recentActivities.sort(
+        (a, b) => b['timestamp'].compareTo(a['timestamp']),
+      );
+    }
+
+    notifyListeners();
   }
 }

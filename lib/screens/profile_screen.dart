@@ -342,7 +342,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.logout),
-                label: Text(_isLoggingOut ? 'Logging out...' : 'Logout'),
+                label: Text(
+                  _isLoggingOut ? 'Logging out...' : 'Logout',
+                  style: TextStyle(color: AppTheme.background),
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.background,
                   backgroundColor: AppTheme.primary,

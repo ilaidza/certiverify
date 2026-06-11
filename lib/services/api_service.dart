@@ -453,6 +453,59 @@ class ApiService {
   // // ==================== CERTIFICATE OPERATIONS ====================
 
   /// Check credential status
+  // Future<Map<String, dynamic>> checkCredentialStatus(
+  //   String credentialId,
+  // ) async {
+  //   try {
+  //     final response = await _dio.get(
+  //       '/api/v1/credentials/$credentialId/status',
+  //     );
+
+  //     print('Check status response: ${response.statusCode}');
+
+  //     if (response.statusCode == 200) {
+  //       final data = response.data;
+  //       return {
+  //         'success': true,
+  //         'credentialId': data['credential_id'],
+  //         'status': data['status'],
+  //         'checkedAt': data['checked_at'],
+  //         'isValid': data['status'] == 'active',
+  //       };
+  //     }
+
+  //     // Handle 404 specifically
+  //     if (response.statusCode == 404) {
+  //       return {
+  //         'success': false,
+  //         'error': 'Credential not found',
+  //         'statusCode': 404,
+  //       };
+  //     }
+
+  //     return {
+  //       'success': false,
+  //       'error': response.data['message'] ?? 'Failed to check status',
+  //     };
+  //   } on DioException catch (e) {
+  //     print('Check status error: ${e.response?.statusCode}');
+
+  //     // Handle 404 Dio exception
+  //     if (e.response?.statusCode == 404) {
+  //       return {
+  //         'success': false,
+  //         'error': 'Credential not found',
+  //         'statusCode': 404,
+  //       };
+  //     }
+
+  //     return {
+  //       'success': false,
+  //       'error': e.response?.data['message'] ?? 'Network error',
+  //     };
+  //   }
+  // }
+
   Future<Map<String, dynamic>> checkCredentialStatus(
     String credentialId,
   ) async {
@@ -460,6 +513,8 @@ class ApiService {
       final response = await _dio.get(
         '/api/v1/credentials/$credentialId/status',
       );
+
+      print('Check status response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -471,13 +526,55 @@ class ApiService {
           'isValid': data['status'] == 'active',
         };
       }
-      return {'success': false, 'error': 'Failed to check status'};
-    } on DioException catch (e) {
-      log('Check status error: ${e.response?.data}');
+
+      // Handle non-200 responses
       return {
         'success': false,
-        'error': e.response?.data['message'] ?? 'Network error',
+        'error': response.data['message'] ?? 'Failed to check status',
+        'statusCode': response.statusCode,
       };
+    } catch (e) {
+      print('Check status error: $e');
+      return {'success': false, 'error': 'Network error. Please try again.'};
+    }
+  }
+
+  Future<Map<String, dynamic>> getCredentialDetails(String credentialId) async {
+    try {
+      final response = await _dio.get(
+        '/api/v1/institution/credentials/$credentialId',
+      );
+
+      print('Get credential details response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final credential = data['credential'] ?? data;
+        return {
+          'success': true,
+          'credentialId': credential['credential_id'],
+          'studentId': credential['student_id'],
+          'studentName': credential['student_name'],
+          'studentDob': credential['student_dob'],
+          'degree': credential['degree'],
+          'degreeClass': credential['degree_class'],
+          'cgpa': credential['cgpa'],
+          'graduationDate': credential['graduation_date'],
+          'institutionId': credential['institution_id'],
+          'institutionName': credential['institution_name'],
+          'issuedAt': credential['issued_at'],
+          'issuedBy': credential['issued_by'],
+          'status': credential['status'],
+        };
+      }
+
+      return {
+        'success': false,
+        'error': response.data['message'] ?? 'Credential not found',
+      };
+    } catch (e) {
+      print('Get credential details error: $e');
+      return {'success': false, 'error': 'Network error. Please try again.'};
     }
   }
 
@@ -738,44 +835,44 @@ class ApiService {
   }
 
   /// Get credential details by ID
-  Future<Map<String, dynamic>> getCredentialDetails(String credentialId) async {
-    try {
-      final response = await _dio.get(
-        '/api/v1/institution/credentials/$credentialId',
-      );
+  // Future<Map<String, dynamic>> getCredentialDetails(String credentialId) async {
+  //   try {
+  //     final response = await _dio.get(
+  //       '/api/v1/institution/credentials/$credentialId',
+  //     );
 
-      log('Get credential details response: ${response.statusCode}');
-      log('Get credential details data: ${response.data}');
+  //     log('Get credential details response: ${response.statusCode}');
+  //     log('Get credential details data: ${response.data}');
 
-      if (response.statusCode == 200) {
-        final data = response.data;
-        final credential = data['credential'] ?? data;
-        return {
-          'success': true,
-          'credentialId': credential['credential_id'],
-          'studentId': credential['student_id'],
-          'studentName': credential['student_name'],
-          'studentDob': credential['student_dob'],
-          'degree': credential['degree'],
-          'degreeClass': credential['degree_class'],
-          'cgpa': credential['cgpa'],
-          'graduationDate': credential['graduation_date'],
-          'institutionId': credential['institution_id'],
-          'institutionName': credential['institution_name'],
-          'issuedAt': credential['issued_at'],
-          'issuedBy': credential['issued_by'],
-          'status': credential['status'],
-        };
-      }
-      return {'success': false, 'error': 'Credential not found'};
-    } on DioException catch (e) {
-      log('Get credential details error: ${e.response?.data}');
-      return {
-        'success': false,
-        'error': e.response?.data['message'] ?? 'Network error',
-      };
-    }
-  }
+  //     if (response.statusCode == 200) {
+  //       final data = response.data;
+  //       final credential = data['credential'] ?? data;
+  //       return {
+  //         'success': true,
+  //         'credentialId': credential['credential_id'],
+  //         'studentId': credential['student_id'],
+  //         'studentName': credential['student_name'],
+  //         'studentDob': credential['student_dob'],
+  //         'degree': credential['degree'],
+  //         'degreeClass': credential['degree_class'],
+  //         'cgpa': credential['cgpa'],
+  //         'graduationDate': credential['graduation_date'],
+  //         'institutionId': credential['institution_id'],
+  //         'institutionName': credential['institution_name'],
+  //         'issuedAt': credential['issued_at'],
+  //         'issuedBy': credential['issued_by'],
+  //         'status': credential['status'],
+  //       };
+  //     }
+  //     return {'success': false, 'error': 'Credential not found'};
+  //   } on DioException catch (e) {
+  //     log('Get credential details error: ${e.response?.data}');
+  //     return {
+  //       'success': false,
+  //       'error': e.response?.data['message'] ?? 'Network error',
+  //     };
+  //   }
+  // }
 
   /// Revoke a credential (Institution Admin only)
   Future<Map<String, dynamic>> revokeCredential({
@@ -931,6 +1028,31 @@ class ApiService {
       return response.statusCode == 200;
     } catch (e) {
       return false;
+    }
+  }
+
+  // ==================== VERIFICATION HISTORY ====================
+
+  /// Get recent verification activity
+  Future<List<Map<String, dynamic>>> getVerificationHistory() async {
+    try {
+      final response = await _dio.get('/api/v1/user/verifications');
+
+      print('Get verification history response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      // 404 means endpoint doesn't exist yet - that's fine
+      if (e.response?.statusCode == 404) {
+        print('Verification history endpoint not available yet');
+        return [];
+      }
+      print('Error fetching verification history: ${e.message}');
+      return [];
     }
   }
 }

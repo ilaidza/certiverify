@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'package:certiverify/models/certificate.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -371,10 +373,22 @@ class _CertificateCard extends StatelessWidget {
     final studentName = certificate['student_name'] ?? '';
     final studentId = certificate['student_id'] ?? '';
     final degree = certificate['degree'] ?? 'Unknown Degree';
-    final institution =
-        certificate['institution_name'] ??
-        certificate['institution'] ??
-        'Unknown Institution';
+
+    // Get institution name - from user profile if admin, or from certificate if available
+    String institution;
+    if (isAdmin) {
+      // For admin view, get institution from logged-in user
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      institution =
+          authProvider.currentUser?.institutionName ?? 'Your Institution';
+    } else {
+      // For student view, get from certificate data
+      institution =
+          certificate['institution_name'] ??
+          certificate['institution'] ??
+          'Unknown Institution';
+    }
+
     final graduationDate = certificate['graduation_date'] ?? '';
 
     return GestureDetector(
@@ -398,7 +412,6 @@ class _CertificateCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Icon based on status
             Container(
               width: 50,
               height: 50,
@@ -414,8 +427,6 @@ class _CertificateCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-
-            // Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,8 +478,6 @@ class _CertificateCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Status Badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
@@ -485,7 +494,6 @@ class _CertificateCard extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(width: 8),
             Icon(Icons.chevron_right, size: 20, color: AppTheme.outline),
           ],

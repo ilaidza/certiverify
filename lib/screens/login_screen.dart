@@ -191,28 +191,37 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(
-                              width: 24,
+                              width: 120, // Fixed width to contain the content
                               height: 24,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                // mainAxisSize: MainAxisSize.min,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  CircularProgressIndicator(strokeWidth: 2),
-                                  SizedBox(width: 4),
-                                  Text('Logging in...'),
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Logging in...',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                                 ],
                               ),
                             )
                           : const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.exit_to_app_outlined),
+                                Icon(Icons.login, size: 20),
                                 SizedBox(width: 8),
                                 Text('Secure Login'),
                               ],
                             ),
                     ),
-
                     const SizedBox(height: 24),
 
                     // Register link
@@ -238,246 +247,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
 
                     const SizedBox(height: 16),
-
-                    // Test credentials button
-                    OutlinedButton.icon(
-                      onPressed: _fillAdminCredentials,
-                      icon: const Icon(Icons.auto_awesome, size: 18),
-                      label: const Text('Use Test Credentials'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Demo Institution Info Card - Update to show both options
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 16,
-                                color: AppTheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Demo Accounts',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Admin Account
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.admin_panel_settings,
-                                      size: 16,
-                                      color: AppTheme.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Institution Admin',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Email: registrar@unilag.edu.ng',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                                Text(
-                                  'Password: registrar123',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton(
-                                    onPressed: _fillAdminCredentials,
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 4,
-                                      ),
-                                      minimumSize: const Size(
-                                        double.infinity,
-                                        32,
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Use Admin Account',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          // Student Account
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.school,
-                                      size: 16,
-                                      color: AppTheme.secondary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Graduate Student',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Email: student@example.com',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                                Text(
-                                  'Password: student123',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton(
-                                    onPressed: _fillStudentCredentials,
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 4,
-                                      ),
-                                      minimumSize: const Size(
-                                        double.infinity,
-                                        32,
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Use Student Account',
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // API Info Card
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 16,
-                                color: AppTheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Demo Institution Access',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  '🏛️ University of Lagos',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Email: newadmin@test.com',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                                Text(
-                                  'Password: admin123',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),

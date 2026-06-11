@@ -74,7 +74,12 @@ class _HomeContentState extends State<_HomeContent> {
       context,
       listen: false,
     );
-    await certProvider.loadDashboardData();
+    await Future.wait([
+      certProvider.fetchUserCertificates(),
+      certProvider.fetchTotalGraduates(),
+      certProvider.fetchHealthStatus(),
+      certProvider.fetchRecentActivities(),
+    ]);
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -87,7 +92,12 @@ class _HomeContentState extends State<_HomeContent> {
       context,
       listen: false,
     );
-    await certProvider.loadDashboardData();
+    await Future.wait([
+      certProvider.fetchUserCertificates(),
+      certProvider.fetchTotalGraduates(),
+      certProvider.fetchHealthStatus(),
+      certProvider.fetchRecentActivities(),
+    ]);
   }
 
   @override
@@ -496,13 +506,14 @@ class _HomeContentState extends State<_HomeContent> {
                     const SizedBox(height: 24),
 
                     // Recent activity
+                    // Recent activity
                     Text(
                       'Recent Activity',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 12),
 
-                    if (certProvider.recentVerifications.isEmpty)
+                    if (certProvider.recentActivities.isEmpty)
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.all(32),
@@ -515,9 +526,9 @@ class _HomeContentState extends State<_HomeContent> {
                         ),
                       )
                     else
-                      ...certProvider.recentVerifications
+                      ...certProvider.recentActivities
                           .take(3)
-                          .map((cert) => _ActivityItem(certificate: cert)),
+                          .map((activity) => _ActivityItem(activity: activity)),
                   ],
                 ),
               ),
@@ -695,12 +706,41 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _ActivityItem extends StatelessWidget {
-  final Certificate certificate;
-
-  const _ActivityItem({required this.certificate});
+  final Map<String, dynamic> activity;
+  
+  const _ActivityItem({required this.activity});
 
   @override
   Widget build(BuildContext context) {
+    // Handle both verification history and certificate data formats
+    final credentialId = activity['credential_id'] ?? '';
+    final action = activity['action'] ?? 'VERIFIED';
+    final timestamp = activity['timestamp'] ?? activity['issued_at'] ?? '';
+    final verifier = activity['verifier'] ?? activity['issued_by'] ?? activity['institution'] ?? 'System';
+    final studentName = activity['student_name'] ?? '';
+    final degree = activity['degree'] ?? '';
+    final status = activity['status'] ?? 'success';
+    
+    final isSuccess = status != 'failed';
+    
+    // Determine icon based on action
+    IconData actionIcon;
+    Color actionColor;
+    
+    if (action == 'ISSUED') {
+      actionIcon = Icons.add_circle;
+      actionColor = AppTheme.primary;
+    } else if (action == 'VERIFIED') {
+      actionIcon = Icons.verified;
+      actionColor = AppTheme.secondary;
+    } else if (action == 'REVOKED') {
+      actionIcon = Icons.cancel;
+      actionColor = AppTheme.error;
+    } else {
+      actionIcon = Icons.history_edu;
+      actionColor = AppTheme.primary;
+    }
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -715,10 +755,10 @@ class _ActivityItem extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.1),
+              color: actionColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(Icons.history_edu, color: AppTheme.primary),
+            child: Icon(actionIcon, color: actionColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -726,16 +766,34 @@ class _ActivityItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  certificate.degree,
+                  action,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                Text(
-                  'Issued to: ${certificate.studentName}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.onSurfaceVariant,
+                if (studentName.isNotEmpty)
+                  Text(
+                    studentName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
+                if (degree.isNotEmpty && studentName.isEmpty)
+                  Text(
+                    degree,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                  ),
+                if (credentialId.isNotEmpty)
+                  Text(
+                    'ID: ${credentialId.substring(0, 8)}...',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: AppTheme.outline,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
               ],
             ),
           ),
@@ -743,7 +801,7 @@ class _ActivityItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                _getTimeAgo(certificate.issuedAt),
+                _getTimeAgo(timestamp),
                 style: TextStyle(
                   fontSize: 12,
                   color: AppTheme.onSurfaceVariant,
@@ -753,27 +811,16 @@ class _ActivityItem extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppTheme.secondaryContainer.withOpacity(0.3),
+                  color: (isSuccess ? AppTheme.secondary : AppTheme.error).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 12,
-                      color: AppTheme.secondary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'SYNCED',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: AppTheme.secondary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  action == 'ISSUED' ? 'COMPLETED' : (isSuccess ? 'SUCCESS' : 'FAILED'),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isSuccess ? AppTheme.secondary : AppTheme.error,
+                  ),
                 ),
               ),
             ],
@@ -783,11 +830,20 @@ class _ActivityItem extends StatelessWidget {
     );
   }
 
-  String _getTimeAgo(DateTime dateTime) {
-    final difference = DateTime.now().difference(dateTime);
-    if (difference.inMinutes < 1) return 'Just now';
-    if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
-    if (difference.inHours < 24) return '${difference.inHours}h ago';
-    return '${difference.inDays}d ago';
+  String _getTimeAgo(String dateTimeString) {
+    if (dateTimeString.isEmpty) return 'Just now';
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      final difference = DateTime.now().difference(dateTime);
+      if (difference.inMinutes < 1) return 'Just now';
+      if (difference.inMinutes < 60) return '${difference.inMinutes}m ago';
+      if (difference.inHours < 24) return '${difference.inHours}h ago';
+      if (difference.inDays < 7) return '${difference.inDays}d ago';
+      if (difference.inDays < 30) return '${(difference.inDays / 7).floor()}w ago';
+      return '${(difference.inDays / 30).floor()}mo ago';
+    } catch (e) {
+      return 'Recently';
+    }
   }
 }
+

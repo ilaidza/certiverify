@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+// import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../utils/theme.dart';
 import 'login_screen.dart';
@@ -36,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Graduate fields
   final _graduateFullNameController = TextEditingController();
   final _studentIdController = TextEditingController();
-  String _InstitutionName = TextEditingController() as String;
+  // String _InstitutionName = TextEditingController() as String;
 
   String _userType = 'institution'; // 'institution', 'verifier', 'graduate'
   bool _isLoading = false;
